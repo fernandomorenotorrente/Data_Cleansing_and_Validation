@@ -15,7 +15,7 @@ Para más información sobre el juego de datos: http://archive.ics.uci.edu/ml/da
 
 
 ## Contenido     
-scr: Contiene el código R.        
+src: Contiene el código R.        
 pdf: Contiene las respuestas a la práctica.         
 csv: El fichero csv original y el dataset final.      
 
