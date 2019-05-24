@@ -1,4 +1,6 @@
 # Data_Cleansing_and_Validation    
+
+## Acerca de este proyecto:   
 Esta práctica se ha realizado bajo el contexto de la asignatura Tipología y ciclo de vida de los datos, perteneciente al Máster en Ciencia de Datos de la Universitat Oberta de Catalunya.    
 
 
@@ -7,8 +9,8 @@ Maria Vavouri y Fernando Moreno
 
 
 ## Objetivo:   
-Hemos utilizado el juego de datos “Adult Data Set” de UCI Machine Learning Repository (originalmente creado por Ronny Kohavi y Barry Becker). 
-Nuestra tarea consiste en limpiar el dataset, validar los datos y realizar un análisis, aplicando pruebas estadísticas, para  determinar si una persona gana más de 50 mil al año según los datos del censo que tuvo lugar el año 1994.    
+Hemos utilizado el juego de datos “Adult Data Set” de UCI Machine Learning Repository (originalmente creado por Ronny Kohavi y Barry Becker). Nuestra tarea consiste en limpiar el dataset, validar los datos y realizar un análisis, aplicando pruebas estadísticas, para  determinar si una persona gana más de 50 mil al año según los datos del censo que tuvo lugar el año 1994.    
+
 Para más información sobre el juego de datos: http://archive.ics.uci.edu/ml/datasets/Adult    
 
 
@@ -16,6 +18,7 @@ Para más información sobre el juego de datos: http://archive.ics.uci.edu/ml/da
 scr: Contiene el código R.        
 pdf: Contiene las respuestas a la práctica.         
 csv: El fichero csv original y el dataset final.      
+
 
 
 ## Licencia     
