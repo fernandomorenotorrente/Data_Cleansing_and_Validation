@@ -77,6 +77,7 @@ Insertamos el juego de datos: "Adult Data Set".
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Cargamos el juego de datos
 datosAdult <- read.csv('http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data',stringsAsFactors = FALSE, header = FALSE)
+
 ```
 
 Añadimos los títulos de cada variable.
@@ -200,7 +201,7 @@ Destacamos:
 
 **occupation**: Valor desconocido ("?") 6%.  
 
-**workclass**: **Private 68%**, Self-emp-not-inc 8%, Self-emp-inc 3%, Federal-gov 3%, Local-gov 6%, State-gov 4%, Without-pay 1.5%, Never-worked 0.5%, **Valor desconocido ("?") 5%**.    
+**workclass**: Private 70%, **Valor desconocido ("?") 5%**.    
 
 **education**: Bachelors 16%, Some-college 22%, 11th 4%, HS-grad 32%, Prof-school 2%, Assoc-acdm 3%, Assoc-voc 4%, 9th 2%, 7th-8th 2%, 12th 2%, Masters 5%, 1st-4th 1%, 10th 3%, Doctorate 1%, 5th-6th 1%, Preschool 1%.   
 
@@ -240,12 +241,15 @@ Obtenemos para la variable "workclass": "Private", para "native.country": "Unite
 Sospechamos que existen valores desconocidos en las mismas líneas, porque "occupation" y "workclass" tienen casi el mismo tamaño de valores "?".   
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-count(filter(datosAdult, occupation=="?" & workclass=="?"))
+
+matching_values_1 = (datosAdult[(occupation=="?" & workclass=="?"),])
+nrow(matching_values_1)
 ```
 Efectivamente obtenemos que todas las observaciones que tienen valor desconocido en workclass pertenecen a las observaciones que tienen valor desconocido en occupation.  
-Pero no ocurre lo mismo para native.country:   
+Pero no ocurre lo mismo para native.country, donde solo 27 de las 583 observaciones coinciden:   
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-count(filter(datosAdult, occupation=="?" & native.country=="?"))
+matching_values_2 = (datosAdult[(occupation=="?" & native.country=="?"),])
+nrow(matching_values_2)
 ```
 
 Para "native.country" hemos decidido reemplazar el valor desconocido por el valor más común ya que el porcentaje de este es bastante alto, en cuanto al atributo "occupation" vamos a borrar las observaciones con atributos desconocidos porque consideramos que el valor más frecuente no es significamente más común que el resto y al borrar estos datos nuestro dataset sigue siendo suficientemente largo. Al borrar dichas observaciones, se eliminan también las observaciones con valores desconocidos en "workclass", sino fuera el caso, reemplazariamos los "?" en "workclass" por el valor más frequente, como hicimos para "native.country".   
@@ -256,16 +260,23 @@ datosAdult$native.country <- replace(datosAdult$native.country,datosAdult$native
 
 # eliminar las observaciones con "?" en occupation. 
 datosAdult <- datosAdult[!(occupation=="?"),]
+attach(datosAdult)
 
 # Confirmamos que no quedan valores desconocidos.
 colSums(datosAdult=="?")
 
 ```
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 
+dim(datosAdult)
+
+```
+
+El dataset actualizado tiene 30718 observaciones.
 
 ### 3.2. Identificación y tratamiento de valores extremos.  
 
-En los atributos tipo factor nos llaman la atención el atributo de "native.country" (con "United-States": 90%) y el atributo de "race" (con "White": 85%).
+En los atributos tipo factor nos llaman la atención el atributo de "native.country" (con "United-States": 90%), el atributo de "race" (con "White": 85%) y el de workclass (con "Private"70%).
 
 Antes de ver los boxplots de los atributos numéricos, podemos crear un scatterplot con todas las clases para ver si hay alguna correlación clara entre los datos.   
 
@@ -274,18 +285,92 @@ pairs(datosAdult, pch = 16, col = "blue", main = "Matrix Scatterplot datosAdult"
 ```
 
 Según el scatterplot, existe una correlación positiva entre "education" y "education.num", por lo que, podríamos eliminar uno de esos, al crear nuestro modelo predictivo. No se observa una correlación fuerte entre el resto de los atributos.    
+
+A continuación, vemos que los números en “education.num” corresponden a un valor del atributo “education”, es decir, son ordenados por título de educación, esto explica la correlación.   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+head (datosAdult[4:5])
+```
+
  
-Vamos a crear boxplots para analizar los atributos numéricos.
+Vamos a crear boxplots para detectar posibles outliers en los atributos numéricos.  
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold',  fig.ncol = 2, fig.align = "center", fig.width=10, fig.height=20}
 grid.arrange(ggboxplot(datosAdult, x ="income" , y = "age", color = "income"),
+          ggbarplot(datosAdult, main="With outliers", x="income", y="age", color = "income"),
           ggboxplot(datosAdult, x ="income" , y = "education.num", color = "income"),
+          ggbarplot(datosAdult, main="With outliers", x="income", y="education.num", color = "income"),
           ggboxplot(datosAdult, x ="income" , y = "fnlwgt", color = "income"),
+          ggbarplot(datosAdult, main="With outliers", x="income", y="fnlwgt", color = "income"),
           ggboxplot(datosAdult, x ="income", y = "capital.gain", color = "income"),
-          ggboxplot(datosAdult, x ="income" , y = "capital.loss", color = "income"),          
-          ggboxplot(datosAdult, x ="income" , y = "hours.week", color = "income"), ncol = 2)
+          ggbarplot(datosAdult, main="With outliers", x="income", y="capital.gain", color = "income"),
+          ggboxplot(datosAdult, x ="income" , y = "capital.loss", color = "income"),  
+          ggbarplot(datosAdult, main="With outliers", x="income", y="capital.loss", color = "income"),
+          ggboxplot(datosAdult, x ="income" , y = "hours.week", color = "income"), 
+          ggbarplot(datosAdult, main="With outliers", x="income", y="hours.week", color = "income"),
+          ncol = 2)
 
 ```
+
+Podemos ver más detalles con la función boxplot.stats e incluso calcular la frecuencia de los valores extremos con: count(boxplot.stats(age)$out). Para evitar crear un documento demasiado largo hemos comentado este código.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+#boxplot.stats(age)
+#count(boxplot.stats(age)$out)
+#sum(count(boxplot.stats(age)$out)$freq)
+###
+#"age" tiene 172 outliers (de 13 valores únicos), el más frequente es el valor 90 que aparece 36 veces
+###
+
+#boxplot.stats(education.num)
+#count(boxplot.stats(education.num)$out)
+#sum(count(boxplot.stats(education.num)$out)$freq)
+###
+# "education.num" tiene 202 outliers (valores: 1,2, el 2 con freq 156)
+###
+
+#boxplot.stats(fnlwgt)
+#count(boxplot.stats(fnlwgt)$out)
+#sum(count(boxplot.stats(fnlwgt)$out)$freq)
+###
+# 926 outliers (784 valores únicos indicados como outliers)
+###
+
+#boxplot.stats(capital.gain)
+#count(boxplot.stats(capital.gain)$out)
+#sum(count(boxplot.stats(capital.gain)$out)$freq)
+###
+# 2589 outliers, (117 valores únicos)
+#table(income, capital.gain)
+###
+
+#boxplot.stats(capital.loss)
+#count(boxplot.stats(capital.loss)$out)
+#sum(count(boxplot.stats(capital.loss)$out)$freq)
+###
+# 1461 outliers, (89 valores únicos)
+#table(income, capital.loss)
+###
+
+#boxplot.stats(hours.week)
+#count(boxplot.stats(hours.week)$out)
+#sum(count(boxplot.stats(hours.week)$out)$freq)
+###
+# 8102 outliers, (74 valores únicos)
+###
+```
+
+Los atributos capital.gain y capital.loss tienen muchos valores atípicos, pero la mayoría de las observaciones tienen valor cero:    
+capital.gain con <=50K   
+22109 observaciones (el 72% de las instancias) == 0.   
+capital.gain con >50K   
+6020 observaciones (el 20% de las instancias) == 0.   
+capital.loss con <=50K   
+22364 observaciones (el 73% de las instancias) == 0.   
+capital.loss con >50K   
+6893 observaciones (el 22% de las instancias) == 0.    
+Por lo tanto, es probable que estos atributos no sean muy predictivos.  
+
 
 ## 4. Análisis de los datos.  
 
@@ -304,6 +389,9 @@ grid.arrange(ggboxplot(datosAdult, x ="income" , y = "age", color = "income"),
 
 ## 7. Código: Hay que adjuntar el código, preferiblemente en R, con el que se ha realizado la limpieza, análisis y representación de los datos. Si lo preferís, también podéis trabajar en Python.   
 
+El código se puede encontrar en el siguiente enlace:     https://github.com/mvavouri/Data_Cleansing_and_Validation/tree/master/src    
+
+
 ******
 # Contribuciones   
 ******
@@ -314,7 +402,11 @@ Redacción de las respuestas: Maria Vavouri y Fernando Moreno
  
 Desarrollo código: Maria Vavouri y Fernando Moreno   
 
+
 ******
 # Referencias
 ******
-    
+  
+Top 50 ggplot2 Visualizations - The Master List (With Full R Code) [En linea].    
+Prabhakaran Selva, r-statistics.co [Consulta 26 de mayo 2019]    
+<http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Density%20Plot>   
