@@ -376,9 +376,21 @@ Por lo tanto, es probable que estos atributos no sean muy predictivos.
 
 ### 4.1. Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar).  
 
+Nos interesa ver si los siguientes atributos son significativos para determinar si una persona gana <=50K o >50k: "age", "sex", "workclass"...     
+No vamos a considerar el atributo "education" ya que están correlacionados con "education.num" (apartado 3.2) podemos utilizar solo el último. Tampoco vamos a usar el atributo "native.country" ya que el 90% pertenece a "United-States"       
+
+
 ### 4.2. Comprobación de la normalidad y homogeneidad de la varianza.
 
 ### 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.  
+
+Hemos comprobado (apartado 3.2) que existe una correlación positiva entre los atributos "education" y "education.num" y que dicha correlación se debe a que los números en “education.num” corresponden a un valor del atributo “education”. No se observa una correlación fuerte entre el resto de los atributos.            
+
+Utilizamos pruebas de contraste de hipótesis en las variables continuas, para identificar si existen diferencias entre la distribución de los valores en las clases <=50K y >50k.      
+
+**Edad**:    
+Hipótesis nula: H0 = La media de la edad es igual en ambas muestras <=50K y >50k.    
+Hipótesis alternativa:  Ha = La media de la edad es diferente en las muestras <=50K y >50k.    
 
 
 ## 5. Representación de los resultados a partir de tablas y gráficas.  
@@ -389,7 +401,7 @@ Por lo tanto, es probable que estos atributos no sean muy predictivos.
 
 ## 7. Código: Hay que adjuntar el código, preferiblemente en R, con el que se ha realizado la limpieza, análisis y representación de los datos. Si lo preferís, también podéis trabajar en Python.   
 
-El código se puede encontrar en el siguiente enlace:     https://github.com/mvavouri/Data_Cleansing_and_Validation/tree/master/src    
+El código se puede encontrar en el siguiente enlace:         https://github.com/mvavouri/Data_Cleansing_and_Validation/tree/master/src    
 
 
 ******
