@@ -1,0 +1,474 @@
+---
+title: "Práctica 2: Limpieza y validación de los datos"
+subtitle: "Asignatura: Tipología y ciclo de vida de los datos"
+author: "Maria Vavouri y Fernando Moreno"
+date: "5/2019"
+output: 
+  html_document:
+    highlight: default
+    theme: cosmo
+    toc: yes
+    toc_depth: 4
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+# Librerías que vamos  a utilizar
+if(!require(plyr)){
+    install.packages("plyr")
+    library (plyr)
+}
+
+if(!require(stringr)){
+    install.packages("stringr")
+    library (stringr)
+}
+
+if(!require(gridExtra)){
+    install.packages("gridExtra")
+    library (gridExtra)
+}
+
+if(!require(ggpubr)){
+    install.packages("ggpubr")
+    library (ggpubr)
+}
+
+if(!require(datadr)){
+    install.packages("datadr")
+    library(datadr)
+}
+
+```
+
+******
+# Introducción
+******
+
+Esta práctica se ha realizado bajo el contexto de la asignatura Tipología y ciclo de vida de los datos, perteneciente al Máster en Ciencia de Datos de la Universitat Oberta de Catalunya.
+
+Hemos utilizado el juego de datos "Adult Data Set" de UCI Machine Learning Repository (originalmente creado por Ronny Kohavi y Barry Becker). Nuestra tarea consiste en limpiar el dataset, validar los datos y realizar un análisis, aplicando pruebas estadísticas, para determinar si una persona gana más de 50 mil al año según los datos del censo (sobre ingresos) que tuvo lugar el año 1994.
+
+Para más información sobre el juego de datos: http://archive.ics.uci.edu/ml/datasets/Adult
+
+******
+# Práctica
+******
+
+## 1. Descripción del dataset. ¿Por qué es importante y qué pregunta/problema pretende responder?  
+
+En este proyecto, trabajamos con el conjunto de datos del censo que tuvo lugar el año 1994. El dataset contiene información sociodemográfica de los indivíduos, tales como la edad, el sexo, la educación, la ocupación, o la etnia y una etiqueta binaria que indica si ganan más de 50 mil al año o no. Nos interesa saber si algunas de estas características pueden influir en cuanto a los ingresos que recibe un indivíduo y si existe alguna correlación en los datos.   
+
+Los primeros pasos que vamos a realizar son: limpieza del dataset, validación de los datos y un análisis previo, aplicando pruebas estadísticas, para entender mejor nuestro conjunto de datos y determinar cuales de los atributos son los más importantes.    
+
+Después del análisis inicial se pueden implementar varios modelos de aprendizaje automático, para conseguir un modelo óptimo de clasificación, que pueda predecir si el ingreso anual de una persona es > = 50k, según sus características sociodemográficas.  
+
+
+## 2. Integración y selección de los datos de interés a analizar.  
+
+Insertamos el juego de datos: "Adult Data Set".   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Cargamos el juego de datos
+datosAdult <- read.csv('data_cleaned.csv',stringsAsFactors = FALSE, header = FALSE)
+
+```
+
+Añadimos los títulos de cada variable.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Añadir headers
+names(datosAdult) <- c("age","workclass","fnlwgt","education","education.num","marital.status","occupation","relationship","race","sex","capital.gain","capital.loss","hours.week","native.country","income")
+```
+
+Observamos la estructura del juego de datos. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+str(datosAdult)
+```
+
+**Descripción breve de las variables**:   
+
+
+Tenemos 32561 Observaciones y 17 atributos, de los cuales ocho son categóricos y seis continuos.   
+
+**age**: Es la edad de cada indivíduo, tipo de valor entero.   
+
+**workclass**: Tipo de valor cadena. Es la clase laboral: Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked.    
+
+**fnlwgt**: Tipo de valor entero. El peso muestral final de cada indviduo, basado en factores sociodemográficos. (Personas con características demográficas similares deben tener un peso similar).      
+**education**: Tipo de valor cadena. Es la educación que ha recibido cada individuo: Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool.   
+
+**education.num**: Valor entero. Representación numérica del atributo de educación   
+
+**marital.status**: Tipo de valor cadena. La situación marital del individuo: Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse.   
+
+**occupation**: Cadena. Es el trabajo de cada individuo:  Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces.   
+
+**relationship**: Cadena. El tipo de relación que corresponde a cada indivíduo: Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried.    
+
+**race**: Tipo de valor cadena. es la etnia de cada individuo: White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black.    
+
+**sex**: Tipo de valor factor. El sexo: Female, Male.   
+
+**capital.gain**: Valor entero. Es la ganancia de capital   
+
+**capital.loss**: Valor entero. Es la pérdida capital   
+
+**hours.week**: Valor continuo entero. Es la media de las horas que trabaja una persona por semana. 
+
+**native.country**: Cadena. Es el país de origen de cada persona: United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands.   
+
+**income**: Factor. En este caso es la etiqueta de las muestras e indica si los ingresos de un indivíduo son mayores o menores de 50K.   
+
+
+## 3. Limpieza de los datos.  
+
+Hemos visto, en el paso anterior, que existen espacios en blanco en todas las variables tipo cadena.   
+El primer paso será borrar estos espacios.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Seleccionar las columnas en formato cadena
+chr_columns <- lapply(datosAdult, class) == "character"
+
+# Eliminar espacios en blanco // require(plyr) // require(stringr)
+datosAdult[, chr_columns] <- colwise(str_trim)(datosAdult[, chr_columns]) 
+
+# Vamos, además, a transformar los atributos tipo caracter a factor:
+datosAdult[, chr_columns] <- lapply(datosAdult[, chr_columns], as.factor)
+
+# Podemos confirmar los cambios observando de nuevo la estructura del dataset. 
+#str(datosAdult)
+
+# Utilizamos la función attach para facilitar el ejercicio
+attach(datosAdult)
+
+```
+
+Una vez realizados los primeros cambios podemos examinar el resumen estadístico del conjunto de datos, para obtener más información.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(datosAdult)
+
+```
+
+
+En cuanto a los valores numéricos podemos ver información sobre los cuartiles, la mediana, la media y los valores mínimo y máximo. Vamos a utilizar estos datos más adelante para hacer pruebas de hipótesis e identificar características importantes en el dataset.   
+
+Observamos con más detalle las variables tipo factor: 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# número de factores en cada variable
+sapply(datosAdult[, chr_columns], nlevels)
+
+
+```
+
+Para una mejor compresión, de la distribución de los datos, calcularemos el total de cada subfactor y su porcentaje:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Insertamos los factores en un dataframe
+df_factors <- data.frame(datosAdult[, chr_columns])
+
+# Calculamos el número y el porcentaje
+for (column in df_factors) {
+    tbl <- table(column)
+    res <- cbind(tbl,round(prop.table(tbl)*100,2))
+    colnames(res) <- c('Count','Percentage')
+    cat("\n")
+    #print(res)
+}
+
+```
+
+Destacamos:   
+
+**income**: <=50K: 76%, >50K : 24%   
+
+**sex**: Female 33%, Male 67%.   
+
+**native.country**: United-States 90%, Valor desconocido ("?") 2%.
+
+**race**: White 85%.   
+
+**occupation**: Valor desconocido ("?") 6%.  
+
+**workclass**: Private 70%, **Valor desconocido ("?") 5%**.    
+
+**education**: Bachelors 16%, Some-college 22%, 11th 4%, HS-grad 32%, Prof-school 2%, Assoc-acdm 3%, Assoc-voc 4%, 9th 2%, 7th-8th 2%, 12th 2%, Masters 5%, 1st-4th 1%, 10th 3%, Doctorate 1%, 5th-6th 1%, Preschool 1%.   
+
+**marital.status**: *Married-civ-spouse 46%*, Divorced 14%, Never-married 33%, Separated 3%, Widowed 2%, Married-spouse-absent 1%, Married-AF-spouse 1%.   
+
+**relationship**: Wife 4%, Own-child 16%, Husband 41%, Not-in-family 26%, Other-relative 2%, Unmarried 11%.
+
+ 
+
+### 3.1. ¿Los datos contienen ceros o elementos vacíos? ¿Cómo gestionarías cada uno de estos casos?  
+
+Según la descripción del propietario del dataset, los valores desconocidos se han re-emplazado por: "?", un valor que ya detectamos en los pasos anteriores.     
+Investigación de valores NA, vacíos o desconocidos:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# NA 
+colSums(is.na(datosAdult))
+# Valores vacíos 
+colSums(datosAdult=="")
+# Valores desconocidos
+colSums(datosAdult=="?")
+
+```
+
+Observamos que no existen valores NA o vacíos, pero en las variables: "workclass", "native.country" y "occupation" tenemos valores desconocidos, "?".  
+
+Veamos cuales son los valores más frecuentes en estas columnnas (también, se pueden consultar los porcentajes):  
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+tail(names(sort(table(datosAdult$workclass))), 1)
+tail(names(sort(table(datosAdult$native.country))), 1)
+tail(names(sort(table(datosAdult$occupation))), 1)
+```
+
+Obtenemos para la variable "workclass": "Private", para "native.country": "United-States" y para "occupation": "Prof-specialty".   
+
+Sospechamos que existen valores desconocidos en las mismas líneas, porque "occupation" y "workclass" tienen casi el mismo tamaño de valores "?".   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+matching_values_1 = (datosAdult[(occupation=="?" & workclass=="?"),])
+nrow(matching_values_1)
+```
+Efectivamente obtenemos que todas las observaciones que tienen valor desconocido en workclass pertenecen a las observaciones que tienen valor desconocido en occupation.  
+Pero no ocurre lo mismo para native.country, donde solo 27 de las 583 observaciones coinciden:   
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+matching_values_2 = (datosAdult[(occupation=="?" & native.country=="?"),])
+nrow(matching_values_2)
+```
+
+Para "native.country" hemos decidido reemplazar el valor desconocido por el valor más común ya que el porcentaje de este es bastante alto, en cuanto al atributo "occupation" vamos a borrar las observaciones con atributos desconocidos porque consideramos que el valor más frecuente no es significamente más común que el resto y al borrar estos datos nuestro dataset sigue siendo suficientemente largo. Al borrar dichas observaciones, se eliminan también las observaciones con valores desconocidos en "workclass", sino fuera el caso, reemplazariamos los "?" en "workclass" por el valor más frequente, como hicimos para "native.country".   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# reemplazar el "?" con el valor más frecuente en native.country. 
+datosAdult$native.country <- replace(datosAdult$native.country,datosAdult$native.country=="?","United-States")
+
+# eliminar las observaciones con "?" en occupation. 
+datosAdult <- datosAdult[!(occupation=="?"),]
+attach(datosAdult)
+
+# Confirmamos que no quedan valores desconocidos.
+colSums(datosAdult=="?")
+
+```
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+dim(datosAdult)
+
+```
+
+El dataset actualizado tiene 30718 observaciones.
+
+### 3.2. Identificación y tratamiento de valores extremos.  
+
+En los atributos tipo factor nos llaman la atención el atributo de "native.country" (con "United-States": 90%), el atributo de "race" (con "White": 85%) y el de workclass (con "Private"70%).
+
+Antes de ver los boxplots de los atributos numéricos, podemos crear un scatterplot con todas las clases para ver si hay alguna correlación clara entre los datos.   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.align = "center", fig.width=30, fig.height=20}
+#pairs(datosAdult, pch = 16, col = "blue", main = "Matrix Scatterplot datosAdult", cex.lab=1.5, cex.axis=1.5, #cex.main=2.5)
+```
+
+Según el scatterplot, existe una correlación positiva entre "education" y "education.num", por lo que, podríamos eliminar uno de esos, al crear nuestro modelo predictivo. No se observa una correlación fuerte entre el resto de los atributos.    
+
+A continuación, vemos que los números en "education.num" corresponden a un valor del atributo "education", es decir, son ordenados por título de educación, esto explica la correlación.   
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+head (datosAdult[4:5])
+```
+
+ 
+Vamos a crear boxplots para detectar posibles outliers en los atributos numéricos.  
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold',  fig.ncol = 2, fig.align = "center", fig.width=10, fig.height=20}
+#grid.arrange(ggboxplot(datosAdult, x ="income" , y = "age", color = "income"),
+#          ggbarplot(datosAdult, main="With outliers", x="income", y="age", color = "income"),
+ #         ggboxplot(datosAdult, x ="income" , y = "education.num", color = "income"),
+  #       ggbarplot(datosAdult, main="With outliers", x="income", y="education.num", color = "income"),
+   #       ggboxplot(datosAdult, x ="income" , y = "fnlwgt", color = "income"),
+    #      ggbarplot(datosAdult, main="With outliers", x="income", y="fnlwgt", color = "income"),
+     #     ggboxplot(datosAdult, x ="income", y = "capital.gain", color = "income"),
+      #    ggbarplot(datosAdult, main="With outliers", x="income", y="capital.gain", color = "income"),
+       #   ggboxplot(datosAdult, x ="income" , y = "capital.loss", color = "income"),  
+        #  ggbarplot(datosAdult, main="With outliers", x="income", y="capital.loss", color = "income"),
+         # ggboxplot(datosAdult, x ="income" , y = "hours.week", color = "income"), 
+          #ggbarplot(datosAdult, main="With outliers", x="income", y="hours.week", color = "income"),
+          #ncol = 2)
+
+```
+
+Podemos ver más detalles con la función boxplot.stats e incluso calcular la frecuencia de los valores extremos con: count(boxplot.stats(age)$out). Para evitar crear un documento demasiado largo hemos comentado este código.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+#boxplot.stats(age)
+#count(boxplot.stats(age)$out)
+#sum(count(boxplot.stats(age)$out)$freq)
+###
+#"age" tiene 172 outliers (de 13 valores únicos), el más frequente es el valor 90 que aparece 36 veces
+###
+
+#boxplot.stats(education.num)
+#count(boxplot.stats(education.num)$out)
+#sum(count(boxplot.stats(education.num)$out)$freq)
+###
+# "education.num" tiene 202 outliers (valores: 1,2, el 2 con freq 156)
+###
+
+#boxplot.stats(fnlwgt)
+#count(boxplot.stats(fnlwgt)$out)
+#sum(count(boxplot.stats(fnlwgt)$out)$freq)
+###
+# 926 outliers (784 valores únicos indicados como outliers)
+###
+
+#boxplot.stats(capital.gain)
+#count(boxplot.stats(capital.gain)$out)
+#sum(count(boxplot.stats(capital.gain)$out)$freq)
+###
+# 2589 outliers, (117 valores únicos)
+#table(income, capital.gain)
+###
+
+#boxplot.stats(capital.loss)
+#count(boxplot.stats(capital.loss)$out)
+#sum(count(boxplot.stats(capital.loss)$out)$freq)
+###
+# 1461 outliers, (89 valores únicos)
+#table(income, capital.loss)
+###
+
+#boxplot.stats(hours.week)
+#count(boxplot.stats(hours.week)$out)
+#sum(count(boxplot.stats(hours.week)$out)$freq)
+###
+# 8102 outliers, (74 valores únicos)
+###
+```
+
+Una vez analizados los valores outliers a través de los bloxplot procedemos a decidir que haremos para tratarlos.
+
+En primer lugar para la variable Age, ya que tenemos extremos que en principio no pertenecen al conjunto de la población activa, eliminaremos los valores mas extremales, sobre todo los que corresponden al rango mas alto de edades. Es plausible que una persona de 17 años trabaje, pero sin embargo, no lo es que una de 90 años lo haga. 
+
+De esta forma eliminaremos los registros con valores de Age mayores a 65 años.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.align = "center", fig.width=30, fig.height=20}
+datosAdult<- datosAdult[datosAdult$Age <= 65]
+```
+
+En cuanto a los valores outliers de la variable education, parecen perfectamente plausibles, es decir, tenemos que abarcar casuísticas en las que la formación de los ciudadanos sea pobre o por contraparte elevada.
+
+Ya que la variable fnlwgt corresponde a pesos sociodemográficos, eliminar o tratar de forma distinta valores extremales sería modificar los casos de estudio mas representativos dentro de nuestra investigación, por lo que deberemos 
+
+Los atributos capital.gain y capital.loss tienen muchos valores atípicos, pero la mayoría de las observaciones tienen valor cero:    
+capital.gain con <=50K   
+22109 observaciones (el 72% de las instancias) == 0.   
+capital.gain con >50K   
+6020 observaciones (el 20% de las instancias) == 0.   
+capital.loss con <=50K   
+22364 observaciones (el 73% de las instancias) == 0.   
+capital.loss con >50K   
+6893 observaciones (el 22% de las instancias) == 0.    
+
+Por lo tanto, es probable que estos atributos no sean muy predictivos.  
+
+Dado que estos atributos nos aportan muy poca información, eliminaremos estas columnas. La amplia mayoría tienen el mismo valor, por lo cuál no será significativa esta información en nuestro estudio.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.align = "center", fig.width=30, fig.height=20}
+#nos quedamos aqui con el mismo dataset pero sin estas columnas
+
+```
+
+
+
+
+## 4. Análisis de los datos.  
+
+### 4.1. Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar).  
+
+Nos interesa ver si los siguientes atributos son significativos para determinar si una persona gana <=50K o >50k: "age", "sex", "workclass"...   
+
+No vamos a considerar el atributo "education" ya que están correlacionados con "education.num" (apartado 3.2) podemos utilizar solo el último. Tampoco vamos a usar el atributo "native.country" ya que el 90% pertenece a "United-States".
+
+En este contexto, estableceremos ahora los grupos en los que vamos a organizar el estudio. 
+
+En primer lugar agruparemos las casuísticas en sexos. Esto puede ser bastante interesante ya que puede darnos pruebas bajo estudio de la brecha salarial entre sexos.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.align = "center", fig.width=30, fig.height=20}
+datosAdult.women <- datosAdult[datosAdult$sex='Female']
+
+datosAdult.men <- datosAdult[datosAdult$sex='Male']
+
+```
+
+Otra agrupación interesante sería analizar los rangos de edad de la población para eso haremos distintos cinco grupos distintos, los comprendidos entre 17 y 25 años, de 25 a 35, de 45 a 65.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.align = "center", fig.width=30, fig.height=20}
+
+datosAdult.junior <- datosAdult[datosAdult$Age>=17 && datosAdult$Age<=25]
+
+datosAdult.bigjunior <- datosAdult[datosAdult$Age>25 && datosAdult$Age<=35]
+
+datosAdult.senior <- datosAdult[datosAdult$Age>35 && datosAdult$Age<=45]
+
+datosAdult.bigsenior <- datosAdult[datosAdult$Age>45 && datosAdult$Age<=65]
+
+```
+
+
+### 4.2. Comprobación de la normalidad y homogeneidad de la varianza.
+
+### 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.  
+
+Hemos comprobado (apartado 3.2) que existe una correlación positiva entre los atributos "education" y "education.num" y que dicha correlación se debe a que los números en "education.num" corresponden a un valor del atributo "education". No se observa una correlación fuerte entre el resto de los atributos.            
+
+Utilizamos pruebas de contraste de hipótesis en las variables continuas, para identificar si existen diferencias entre la distribución de los valores en las clases <=50K y >50k.      
+
+**Edad**:    
+Hipótesis nula: H0 = La media de la edad es igual en ambas muestras <=50K y >50k.    
+Hipótesis alternativa:  Ha = La media de la edad es diferente en las muestras <=50K y >50k.    
+
+
+## 5. Representación de los resultados a partir de tablas y gráficas.  
+
+
+## 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?  
+
+
+## 7. Código: Hay que adjuntar el código, preferiblemente en R, con el que se ha realizado la limpieza, análisis y representación de los datos. Si lo preferís, también podéis trabajar en Python.   
+
+El código se puede encontrar en el siguiente enlace:         https://github.com/mvavouri/Data_Cleansing_and_Validation/tree/master/src    
+
+
+******
+# Contribuciones   
+******
+
+Investigación previa: Maria Vavouri y Fernando Moreno   
+
+Redacción de las respuestas: Maria Vavouri y Fernando Moreno   
+ 
+Desarrollo código: Maria Vavouri y Fernando Moreno   
+
+
+******
+# Referencias
+******
+  
+Top 50 ggplot2 Visualizations - The Master List (With Full R Code) [En linea].    
+Prabhakaran Selva, r-statistics.co [Consulta 26 de mayo 2019]    
+<http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html#Density%20Plot>   
